@@ -1,4 +1,5 @@
 proceso3: 50, 0, 3
 proceso2: 100, 0, 4
 proceso1: 230, 0, 1
-proceso4: 70, 2, 2
+proceso5: 155, 3, 2
+proceso7: 4, 4, 3
