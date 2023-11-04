@@ -12,8 +12,8 @@ ctk.set_appearance_mode("Dark")
 # Supported themes: green, dark-blue, blue
 ctk.set_default_color_theme("dark-blue")
 
-
 # Estados posibles de un proceso: ready, ready and suspended, in execution, y finished
+
 
 class ComputerProcess:
     def __init__(self, id, size, arrival_time, execution_time, state=None, location=None):
@@ -56,11 +56,11 @@ class Simulator:
 
     def create_widgets(self):
         # Label to enter process information
-        self.matrix = tk.Frame(self.master, bg="#00008B")
-        self.cola_finalizados = tk.Frame(self.master, bg="#00008B")
-        self.frame3 = tk.Frame(self.master, bg="#00008B")
+        self.matrix = tk.Frame(self.master, bg="#5B5E61")
+        self.cola_finalizados = tk.Frame(self.master, bg="#5B5E61")
+        self.bottom_frame = tk.Frame(self.master, bg="#5B5E61")
         # Adjust the row and column values as needed
-        self.frame3.grid(row=4, column=0, columnspan=2)
+        self.bottom_frame.grid(row=4, column=0, columnspan=2)
 
         self.process_size_label = ctk.CTkLabel(
             self.master, text="Tamaño de Proceso:")
@@ -91,14 +91,14 @@ class Simulator:
         self.cargar_archivo_btn.grid(row=3, column=1,  pady=10)
 
         # Label for the state of the ready process queue
-        ctk.CTkLabel(self.frame3, text="Cola de Procesos Listos:").grid(
+        ctk.CTkLabel(self.bottom_frame, text="Cola de Procesos Listos:").grid(
             row=1, column=0, padx=5, pady=5)
 
         # Listbox to display the ready process queue
-        self.ready_queue_listbox = ctk.CTkTextbox(self.frame3)
+        self.ready_queue_listbox = ctk.CTkTextbox(self.bottom_frame)
         self.ready_queue_listbox.grid(row=1, column=1, padx=5, pady=5)
 
-        # self.ready_queue_listbox = ctk.CTkScrollableFrame(self.frame3, width=200, height=200, orientation="horizontal")
+        # self.ready_queue_listbox = ctk.CTkScrollableFrame(self.bottom_frame, width=200, height=200, orientation="horizontal")
         # self.ready_queue_listbox.grid(row=1, column=1, padx=5, pady=5)
 
         # Button to start the simulation
@@ -140,14 +140,11 @@ class Simulator:
                 self.save_process(line[0], line[1], line[2])
 
     def save_process(self, p_size, p_ta, p_ti):
-
         process_id = self.process_ids
         process = ComputerProcess(process_id, p_size, p_ta, p_ti)
-
         self.total_execution += int(p_ti)
         self.ready_queue.append(process)
         self.process_ids += 1
-
         self.ready_queue_listbox.insert(
             tk.END, f"ID: {process.id}, TA: {process.arrival_time}, TI: {process.execution_time}\n")
 
@@ -221,6 +218,15 @@ class Simulator:
 
         self.delete_buttons()
 
+        self.right_frame = tk.Frame(
+            self.bottom_frame, bg="#00448B", borderwidth=10)
+        self.right_frame.grid(row=1, column=3, padx=5, pady=5)
+
+        ctk.CTkLabel(self.right_frame, text="Proceso en ejecución").grid(
+            row=0, column=0, padx=10, pady=10,)
+        ctk.CTkLabel(self.right_frame, text="Proceso que salió de ejecución").grid(
+            row=0, column=1, padx=10, pady=10)
+
         for index, partition in enumerate(self.memory_partitions):
 
             # Poner títulos de la matriz
@@ -241,21 +247,27 @@ class Simulator:
         ctk.CTkLabel(cola_finalizados, text="Procesos finalizados").grid(
             row=0, padx=100, pady=5)
 
-        ctk.CTkButton(self.frame3, text="Finalizar Simulación",
+        ctk.CTkButton(self.bottom_frame, text="Finalizar Simulación",
                       command=self.finish_simulation).grid(row=2, column=0, pady=10)
-        ctk.CTkButton(self.frame3, text="Continuar simulación",
+        ctk.CTkButton(self.bottom_frame, text="Continuar simulación",
                       command=self.continue_simulation).grid(row=2, column=1, pady=10)
         self.progress_bar = ctk.CTkProgressBar(
             self.master, orientation="horizontal")
         self.progress_bar.grid(row=9, pady=10, columnspan=2)
         self.progress_bar.set(0)
+        ctk.CTkLabel(self.master, text="Tiempo actual: ").grid(
+            row=10, pady=10, column=0)
+        self.tiempo_actual = ctk.CTkLabel(self.master, text="").grid(
+            row=10, pady=10, column=1)
 
     def next_execution(self):
         queue = self.ready_queue
         if len(queue) > 2:
-            queue[0], queue[1], queue[2] = queue[2], queue[0], queue[1]
+            queue[0], queue[1], queue[2] = queue[1], queue[2], queue[0]
         elif len(queue) == 2:
             queue[0], queue[1] = queue[1], queue[0]
+
+        self.ready_queue = queue
 
     def end_process(self):
         matrix = self.matrix
@@ -271,8 +283,12 @@ class Simulator:
             row=location+1, column=4, padx=5, pady=5)
         ctk.CTkLabel(self.cola_finalizados, text=str(process.id)).grid(
             row=self.process_ids, padx=5, pady=5)
+        ctk.CTkLabel(self.right_frame, text=process.id).grid(
+            row=1, column=1)
         self.memory_partitions[process.location].not_busy = True
         del self.ready_queue[0]
+        ctk.CTkLabel(self.right_frame, text=self.ready_queue[0].id).grid(
+            row=1, column=0)
 
     def continue_simulation(self):
         if self.ready_queue:
@@ -280,6 +296,8 @@ class Simulator:
             self.progress_bar.set(
                 self.total_execution_inverse / self.total_execution)
             self.quantum -= 1
+            self.tiempo_actual = ctk.CTkLabel(self.master, text=str(self.total_execution_inverse)).grid(
+                row=10, pady=10, column=1)
 
             process = self.ready_queue[0]
             # Se almacena como string porque para mostrarlo en la ventana necesita ser string
@@ -290,14 +308,18 @@ class Simulator:
                 self.load_to_memory()
                 self.process_ids += 1
                 self.quantum = self.max_quantum
+
             else:
-                if not self.quantum:
-                    self.quantum = self.max_quantum
-
-                    self.next_execution()
-
                 ctk.CTkLabel(self.matrix, text=process.execution_time).grid(
                     row=process.location+1, column=4, padx=5, pady=5)
+                if not self.quantum:
+                    self.quantum = self.max_quantum
+                    ctk.CTkLabel(self.right_frame, text=process.id).grid(
+                        row=1, column=1)
+                    self.next_execution()
+                    process = self.ready_queue[0]
+                    ctk.CTkLabel(self.right_frame, text=process.id).grid(
+                        row=1, column=0)
 
         else:
             self.finish_simulation()
@@ -336,13 +358,14 @@ class MainApp(ctk.CTk):
         # Create an instance of the Simulator class
         self.simulator = Simulator(self.master)
 
+
         # Add other elements to the main application if needed
         # ...
 # Crea la aplicación y ejecútala
 if __name__ == "__main__":
     root = tk.Tk()
     # Change the background color of the window to light gray
-    root.configure(bg="#00008B")
+    root.configure(bg="#5B5E61")
     # Configure column weight to make elements expand horizontally
     # root.columnconfigure(0, weight=1)  # Assumes you are using column 0, adjust if necessary
     app = MainApp(root)
