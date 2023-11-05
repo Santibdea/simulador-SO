@@ -219,18 +219,8 @@ class Simulator:
         # Limpiar lo ingresado y reordenarlo por tiempo de arribo
 
         self.all_proccess = sorted(self.all_proccess, key=lambda proceso: (proceso.id, proceso.arrival_time))
-        all_proccess_copy = self.all_proccess.copy()
 
-        for proceso in all_proccess_copy:
-            print(f"proceso antes {proceso.id}")
-
-        for proceso in all_proccess_copy:
-            print(f"proceso {proceso.id}")
-            if len(self.ready_queue) < 5:
-                self.ready_queue.append(proceso)
-                self.all_proccess.remove(proceso)
-            else:
-                break
+        self.verifyReadyQueue()
 
 
         # for process in self.all_proccess:
@@ -351,6 +341,8 @@ class Simulator:
         if self.proccess_in_execution is not None:
                 
                 for i in range(1, 3):
+                    self.verifyReadyQueue()  #Verifico si hay algun proceso que se pueda añadir a la cola de listos
+
                     self.total_execution_inverse += 1
                     self.progress_bar.set(self.total_execution_inverse / self.total_execution)
                     self.tiempo_actual = ctk.CTkLabel(self.master, text=str(self.total_execution_inverse)).grid(row=10, pady=10, column=1)
@@ -467,6 +459,19 @@ class Simulator:
 
         # else:
         #     self.finish_simulation()
+    def verifyReadyQueue(self):
+        all_proccess_copy = self.all_proccess.copy()
+
+        for proceso in all_proccess_copy:
+            print(f"proceso antes {proceso.id}")
+
+        for proceso in all_proccess_copy:
+            print(f"proceso {proceso.id}")
+            if (len(self.ready_queue) < 5) and (proceso.arrival_time <= self.total_execution_inverse):
+                self.ready_queue.append(proceso)
+                self.all_proccess.remove(proceso)
+            else:
+                break
 
     def finish_simulation(self):
         # custom_box = tk.Toplevel(root)
