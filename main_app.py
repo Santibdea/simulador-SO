@@ -383,7 +383,10 @@ class Simulator:
 
                             self.proccess_exit = ctk.CTkLabel(self.right_frame, text="Proceso que abandono el procesador: {}".format(proceso_actual_id))
                             self.proccess_exit.grid(row=0, column=1, padx=10, pady=10)
-                        
+                            ctk.CTkLabel(self.cola_finalizados, text=str(proceso_actual_id)).grid(
+                                row=self.process_ids, padx=5, pady=5)
+                            self.process_ids =  self.process_ids + 1
+                            
                             self.proccess_in_execution = None
 
                             if self.ready_queue: # Si hay procesos en cola de listos, se asigna el siguiente nuevamente
