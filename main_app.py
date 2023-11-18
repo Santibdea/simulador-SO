@@ -411,6 +411,12 @@ class Simulator:
             if(partition.proccess_asigned == None):
                 return False
         return True
+    
+    def is_proccess_loaded_in_memory(self, proceso):
+        for partition in self.memory_partitions:
+            if(partition.proccess_asigned.id == proceso.id):
+                return True
+        return False
 
     def continue_simulation(self, ):
 
@@ -419,7 +425,7 @@ class Simulator:
                 
                 for i in range(1, 3):
                     self.verifyReadyQueue()  #Verifico si hay algun proceso que se pueda añadir a la cola de listos
-
+                    
                     self.total_execution_inverse += 1
                     self.progress_bar.set(self.total_execution_inverse / self.total_execution)
                     self.tiempo_actual = ctk.CTkLabel(self.master, text=str(self.total_execution_inverse)).grid(row=10, pady=10, column=1)
@@ -478,10 +484,30 @@ class Simulator:
                                     row=best_fit_partition.partition_id, column=3, padx=5, pady=5)
                                 ctk.CTkLabel(self.matrix, text=process.execution_time).grid(
                                    row=best_fit_partition.partition_id, column=4, padx=5, pady=5)
-                                  
+                    #Veo si la memoria esta llena, el caso en el que el siguiente proceso que se deba procesar no este en memoria, debe cargarse por bestFit, pero sin sacar de memoria el proceso que esta actualmente en ejecucion           
+                    if self.is_memory_full(): 
+                        print("La memoria esta llena")
+                        proceso_siguiente = self.ready_queue[0]
+                        if not self.is_proccess_loaded_in_memory(proceso_siguiente):
+                            print("el siguiente proceso no esta en memoria, se debe cargar, sin reemplazar el proceso q se esta ejecutando")
 
-
-
+                            best_fit_partition = None
+                            
+                            for partition in self.memory_partitions: #Encuentro la mejor particion teniendo en cuenta que no puede reemplazar aquella particion que tiene el proceso en ejecucion
+                                if partition.partition_id != 4 and partition.proccess_asigned.id != self.proccess_in_execution.id and partition.size >= proceso_siguiente.size:  
+                                    if best_fit_partition is None or partition.size < best_fit_partition.size:
+                                        best_fit_partition = partition
+                            best_fit_partition.proccess_asigned = proceso_siguiente
+                            proceso_siguiente.location = best_fit_partition.partition_id
+                             # Actualiza la interfaz o los datos necesarios
+                            ctk.CTkLabel(self.matrix, text=proceso_siguiente.id).grid(
+                                            row=best_fit_partition.partition_id, column=1, padx=5, pady=5)
+                            ctk.CTkLabel(self.matrix, text=proceso_siguiente.size).grid(
+                                            row=best_fit_partition.partition_id, column=2, padx=5, pady=5)
+                            ctk.CTkLabel(self.matrix, text=proceso_siguiente.arrival_time).grid(
+                                            row=best_fit_partition.partition_id, column=3, padx=5, pady=5)
+                            ctk.CTkLabel(self.matrix, text=proceso_siguiente.execution_time).grid(
+                                        row=best_fit_partition.partition_id, column=4, padx=5, pady=5)
 
 
                     if self.proccess_in_execution.execution_time == 0 or i == 2:
@@ -490,6 +516,8 @@ class Simulator:
                         # tiempo_espera = tiempo_retorno - self.proceso_en_ejecucion.tiempo_irrupcion   # Para estadisticas
                         
                         if self.proccess_in_execution.execution_time == 0:   
+
+                            print('un proceso termino')
                             # Aqui si el proceso termina se va a la cola de finalizados
                             self.release_partition(self.proccess_in_execution.location)
                             self.finished_queue.append(self.proccess_in_execution) 
@@ -643,14 +671,14 @@ class Simulator:
         top = tk.Toplevel()
         top.title('Simulación finalizada')
         # # Load your image
-        image_path = "images/libertad.webp"
-        img = Image.open(image_path)
-        img = ImageTk.PhotoImage(img)
+        # image_path = "images/libertad.webp"
+        # img = Image.open(image_path)
+        # img = ImageTk.PhotoImage(img)
 
         # # Display the image
-        image_label = tk.Label(top, image=img)
-        image_label.image = img  # To prevent garbage collection
-        image_label.pack()
+        # image_label = tk.Label(top, image=img)
+        # image_label.image = img  # To prevent garbage collection
+        # image_label.pack()
 
         # # Additional text or buttons can be added as needed
         # message_label = tk.Label(top, text="Cerrar")

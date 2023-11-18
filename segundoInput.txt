@@ -1,0 +1,4 @@
+proceso1: 58, 0, 4
+proceso2: 110, 0, 4
+proceso3: 220, 0, 4
+proceso4: 100, 0, 4
