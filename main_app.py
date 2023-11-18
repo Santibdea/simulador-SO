@@ -57,6 +57,8 @@ class Simulator:
         self.max_quantum = 2
         self.multiprog_degree = 5
 
+        
+
         # Create a dictionary to store label references
         self.label_references = {}
         # Add GUI elements
@@ -66,6 +68,7 @@ class Simulator:
         # Label to enter process information
         self.matrix = tk.Frame(self.master, bg="#5B5E61")
         self.cola_finalizados = tk.Frame(self.master, bg="#5B5E61")
+        self.cola_listos = tk.Frame(self.master, bg="#5B5E61")
         self.bottom_frame = tk.Frame(self.master, bg="#5B5E61")
         # Adjust the row and column values as needed
         self.bottom_frame.grid(row=4, column=0, columnspan=2)
@@ -292,6 +295,7 @@ class Simulator:
         matrix.grid(row=1, column=0)
 
         cola_finalizados = self.cola_finalizados
+        cola_listos = self.cola_listos
 
         for proceso in self.ready_queue:
             print(f"proceso id {proceso.id}")
@@ -316,12 +320,25 @@ class Simulator:
                 ctk.CTkLabel(self.matrix, text=process.execution_time).grid(
                     row=(best_partition.partition_id), column=4, padx=5, pady=5)
             else:
-                print('ttt')
                 process.state = 'ready and suspended'     
 
         self.proccess_in_execution = self.ready_queue.popleft() #Inicio el primer proceso
 
         cola_finalizados.grid(row=1, column=1, sticky="ne")
+        cola_listos.grid(row=1, column=5, sticky="ne")
+            # Limpiar la GUI antes de actualizarla
+        for widget in self.cola_listos.winfo_children():
+            widget.destroy()
+
+        # Encabezado de la cola de listos
+        ctk.CTkLabel(self.cola_listos, text="Cola de listos: ").grid(
+            row=0, column=0, padx=100, pady=5)
+
+        # Mostrar los procesos en la cola de listos
+        for i, process in enumerate(self.ready_queue, start=1):
+            ctk.CTkLabel(self.cola_listos, text=str(process.id)).grid(
+                row=i, column=0, padx=5, pady=5)
+
 
         self.delete_buttons()
 
@@ -359,6 +376,9 @@ class Simulator:
         # self.load_to_memory()
 
         ctk.CTkLabel(cola_finalizados, text="Procesos finalizados").grid(
+            row=0, padx=100, pady=5)
+        
+        ctk.CTkLabel(cola_listos, text="Cola de listos: ").grid(
             row=0, padx=100, pady=5)
 
         ctk.CTkButton(self.bottom_frame, text="Finalizar Simulación",
@@ -417,6 +437,20 @@ class Simulator:
             if(partition.proccess_asigned.id == proceso.id):
                 return True
         return False
+
+    def update_ready_queue_GUI(self):
+    # Limpiar la GUI antes de actualizarla
+     for widget in self.cola_listos.winfo_children():
+        widget.destroy()
+
+    # Encabezado de la cola de listos
+     ctk.CTkLabel(self.cola_listos, text="Cola de listos: ").grid(
+        row=0, column=0, padx=100, pady=5)
+
+    # Mostrar los procesos en la cola de listos
+     for i, process in enumerate(self.ready_queue, start=1):
+        ctk.CTkLabel(self.cola_listos, text=str(process.id)).grid(
+            row=i, column=0, padx=5, pady=5)
 
     def continue_simulation(self, ):
 
@@ -588,7 +622,9 @@ class Simulator:
                                 proceso_siguiente = self.ready_queue.popleft()
                                 self.proccess_in_execution = proceso_siguiente
                                 self.procces_enter = ctk.CTkLabel(self.right_frame, text="Proceso que se asigno al procesador: {}".format(proceso_siguiente.id))           
-                                self.procces_enter.grid(row=0, column=2, padx=10, pady=10)    
+                                self.procces_enter.grid(row=0, column=2, padx=10, pady=10) 
+                                self.update_ready_queue_GUI()
+   
                             break
                         
                         if i==2 and self.proccess_in_execution.execution_time != 0 :
@@ -601,12 +637,13 @@ class Simulator:
                             self.proccess_exit.grid(row=0, column=1, padx=10, pady=10)
                         
                             self.proccess_in_execution = None
-
+                            self.update_ready_queue_GUI()
                             if self.ready_queue: # Si hay procesos en cola de listos, se asigna el siguiente nuevamente
                                 proceso_siguiente = self.ready_queue.popleft()
                                 self.proccess_in_execution = proceso_siguiente
                                 self.procces_enter = ctk.CTkLabel(self.right_frame, text="Proceso que se asigno al procesador: {}".format(proceso_siguiente.id))           
                                 self.procces_enter.grid(row=0, column=2, padx=10, pady=10)  
+                                self.update_ready_queue_GUI()
                             break
 
 
@@ -664,6 +701,7 @@ class Simulator:
             if (len(self.ready_queue) < 5) and (proceso.arrival_time <= self.total_execution_inverse):
                 self.ready_queue.append(proceso)
                 self.all_proccess.remove(proceso)
+                self.update_ready_queue_GUI()
 
     def finish_simulation(self):
         # custom_box = tk.Toplevel(root)
