@@ -547,7 +547,23 @@ class Simulator:
                                                 row=best_fit_partition.partition_id, column=3, padx=5, pady=5)
                                 ctk.CTkLabel(self.matrix, text=proceso_siguiente.execution_time).grid(
                                             row=best_fit_partition.partition_id, column=4, padx=5, pady=5)
-
+                            if(best_fit_partition == None): #Si es none es un caso especial en el cual se debe reemplazar si o si por el proceso en ejecucion que este en memoria, ya q no hay otra opcion.
+                                for partition in self.memory_partitions: #Encuentro la mejor particion teniendo en cuenta que no puede reemplazar aquella particion que tiene el proceso en ejecucion
+                                    if partition.partition_id != 4 and partition.size >= proceso_siguiente.size:  
+                                        #hasta aca todo correcto 
+                                        if best_fit_partition is None or partition.size < best_fit_partition.size:
+                                            best_fit_partition = partition
+                                best_fit_partition.proccess_asigned = proceso_siguiente
+                                proceso_siguiente.location = best_fit_partition.partition_id
+                             # Actualiza la interfaz o los datos necesarios
+                                ctk.CTkLabel(self.matrix, text=proceso_siguiente.id).grid(
+                                                row=best_fit_partition.partition_id, column=1, padx=5, pady=5)
+                                ctk.CTkLabel(self.matrix, text=proceso_siguiente.size).grid(
+                                                row=best_fit_partition.partition_id, column=2, padx=5, pady=5)
+                                ctk.CTkLabel(self.matrix, text=proceso_siguiente.arrival_time).grid(
+                                                row=best_fit_partition.partition_id, column=3, padx=5, pady=5)
+                                ctk.CTkLabel(self.matrix, text=proceso_siguiente.execution_time).grid(
+                                            row=best_fit_partition.partition_id, column=4, padx=5, pady=5)
 
                     if self.proccess_in_execution.execution_time == 0 or i == 2:
                         # tiempo_finalizacion = self.tiempo
