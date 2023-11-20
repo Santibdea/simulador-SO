@@ -610,23 +610,29 @@ class Simulator:
                             self.verifyReadyQueue() #Primero veo si arribo algun proceso y lo agrego, luego recien devuelvo el que se estaba ejecutando para darle prioridad al que arriba
                             for proceso in self.ready_queue:
                                 print(proceso.id)
-                            proceso_siguiente = self.ready_queue[0]
-                            if proceso_siguiente != None and not self.is_proccess_loaded_in_memory(proceso_siguiente):
-                                print('el proceso siguiente', proceso_siguiente.id, ' No esta en memoria')
-                                best_partition = self.best_fit_partition(proceso_siguiente.size)
-                                if best_partition != None:
-                                    best_partition.proccess_asigned = proceso_siguiente
-                                    proceso_siguiente.location = best_partition
-                                    self.update_memory_GUI(proceso_siguiente, best_partition)
-                                if(best_partition == None): #Si es none es un caso especial en el cual se debe reemplazar si o si por el proceso en ejecucion que este en memoria, ya q no hay otra opcion.
-                                    best_fit_partition = None
-                                    for partition in self.memory_partitions: #Encuentro la mejor particion teniendo en cuenta que no puede reemplazar aquella particion que tiene el proceso en ejecucion
-                                        if partition.partition_id != 4 and partition.size >= proceso_siguiente.size:  
-                                            if best_fit_partition is None or partition.size < best_fit_partition.size:
-                                                best_fit_partition = partition
-                                    best_fit_partition.proccess_asigned = proceso_siguiente
-                                    proceso_siguiente.location = best_fit_partition.partition_id
-                                    self.update_memory_GUI(proceso_siguiente, best_fit_partition)
+
+                            if len(self.ready_queue) > 0:
+                                proceso_siguiente = self.ready_queue[0]
+                                if proceso_siguiente != None and not self.is_proccess_loaded_in_memory(proceso_siguiente):
+                                    print('el proceso siguiente', proceso_siguiente.id, ' No esta en memoria')
+                                    best_partition = self.best_fit_partition(proceso_siguiente.size)
+                                    if best_partition != None:
+                                        best_partition.proccess_asigned = proceso_siguiente
+                                        proceso_siguiente.location = best_partition
+                                        self.update_memory_GUI(proceso_siguiente, best_partition)
+                                    if(best_partition == None): #Si es none es un caso especial en el cual se debe reemplazar si o si por el proceso en ejecucion que este en memoria, ya q no hay otra opcion.
+                                        best_fit_partition = None
+                                        for partition in self.memory_partitions: #Encuentro la mejor particion teniendo en cuenta que no puede reemplazar aquella particion que tiene el proceso en ejecucion
+                                            if partition.partition_id != 4 and partition.size >= proceso_siguiente.size:  
+                                                if best_fit_partition is None or partition.size < best_fit_partition.size:
+                                                    best_fit_partition = partition
+                                        best_fit_partition.proccess_asigned = proceso_siguiente
+                                        proceso_siguiente.location = best_fit_partition.partition_id
+                                        self.update_memory_GUI(proceso_siguiente, best_fit_partition)
+                            else:
+                                print("La cola de listos está vacía.")
+                            # proceso_siguiente = self.ready_queue[0]
+                            
                                     
 
 
