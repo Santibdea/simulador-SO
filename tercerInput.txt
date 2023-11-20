@@ -1,0 +1,5 @@
+proceso1: 60, 0, 5
+proceso2: 120, 2, 8
+proceso3: 250, 5, 12
+proceso4: 60, 7, 6
+proceso5: 120, 10, 10

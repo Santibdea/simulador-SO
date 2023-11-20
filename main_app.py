@@ -272,7 +272,8 @@ class Simulator:
         self.all_proccess = sorted(self.all_proccess, key=lambda proceso: (proceso.id, proceso.arrival_time))
 
         self.verifyReadyQueue()
-
+        # self.verifyIfNextProcessIsInMemoryAndLoad()
+        # self.verifyIfNextProcessIsInMemoryAndLoad()
         
         # for process in self.all_proccess:
         #     print(f"pasa el proceso {process.id}")
@@ -434,8 +435,9 @@ class Simulator:
     
     def is_proccess_loaded_in_memory(self, proceso):
         for partition in self.memory_partitions:
-            if(partition.proccess_asigned.id == proceso.id):
-                return True
+            if(partition.proccess_asigned != None):
+                if(partition.proccess_asigned.id == proceso.id):
+                    return True
         return False
 
     def update_ready_queue_GUI(self):
@@ -459,7 +461,7 @@ class Simulator:
                 
                 for i in range(1, 3):
                     self.verifyReadyQueue()  #Verifico si hay algun proceso que se pueda añadir a la cola de listos
-                    
+                    # self.verifyIfNextProcessIsInMemoryAndLoad()
                     self.total_execution_inverse += 1
                     self.progress_bar.set(self.total_execution_inverse / self.total_execution)
                     self.tiempo_actual = ctk.CTkLabel(self.master, text=str(self.total_execution_inverse)).grid(row=10, pady=10, column=1)
@@ -520,51 +522,7 @@ class Simulator:
                                    row=best_fit_partition.partition_id, column=4, padx=5, pady=5)
                     #Veo si la memoria esta llena, el caso en el que el siguiente proceso que se deba procesar no este en memoria, debe cargarse por bestFit, pero sin sacar de memoria el proceso que esta actualmente en ejecucion           
                     if self.is_memory_full(): 
-                        print("La memoria esta llena")
-                        proceso_siguiente = self.ready_queue[0]
-                        if proceso_siguiente != None and not self.is_proccess_loaded_in_memory(proceso_siguiente):
-                            print("el siguiente proceso no esta en memoria, se debe cargar, sin reemplazar el proceso q se esta ejecutando")
-
-                            best_fit_partition = None
-                            
-                            for partition in self.memory_partitions: #Encuentro la mejor particion teniendo en cuenta que no puede reemplazar aquella particion que tiene el proceso en ejecucion
-                                if partition.partition_id != 4 and partition.proccess_asigned.id != self.proccess_in_execution.id and partition.size >= proceso_siguiente.size:  
-                                    #hasta aca todo correcto 
-                                    if best_fit_partition is None or partition.size < best_fit_partition.size:
-                                        best_fit_partition = partition
-                            print('aa', best_fit_partition)
-                            # Si no se encontró una partición que cumpla los requisitos, intentar con la segunda mejor opción, ya que la mejor es la que esta con el proceso en ejecucion
-                        
-                            if(best_fit_partition != None):
-                                best_fit_partition.proccess_asigned = proceso_siguiente
-                                proceso_siguiente.location = best_fit_partition.partition_id
-                             # Actualiza la interfaz o los datos necesarios
-                                ctk.CTkLabel(self.matrix, text=proceso_siguiente.id).grid(
-                                                row=best_fit_partition.partition_id, column=1, padx=5, pady=5)
-                                ctk.CTkLabel(self.matrix, text=proceso_siguiente.size).grid(
-                                                row=best_fit_partition.partition_id, column=2, padx=5, pady=5)
-                                ctk.CTkLabel(self.matrix, text=proceso_siguiente.arrival_time).grid(
-                                                row=best_fit_partition.partition_id, column=3, padx=5, pady=5)
-                                ctk.CTkLabel(self.matrix, text=proceso_siguiente.execution_time).grid(
-                                            row=best_fit_partition.partition_id, column=4, padx=5, pady=5)
-                            if(best_fit_partition == None): #Si es none es un caso especial en el cual se debe reemplazar si o si por el proceso en ejecucion que este en memoria, ya q no hay otra opcion.
-                                for partition in self.memory_partitions: #Encuentro la mejor particion teniendo en cuenta que no puede reemplazar aquella particion que tiene el proceso en ejecucion
-                                    if partition.partition_id != 4 and partition.size >= proceso_siguiente.size:  
-                                        #hasta aca todo correcto 
-                                        if best_fit_partition is None or partition.size < best_fit_partition.size:
-                                            best_fit_partition = partition
-                                best_fit_partition.proccess_asigned = proceso_siguiente
-                                proceso_siguiente.location = best_fit_partition.partition_id
-                             # Actualiza la interfaz o los datos necesarios
-                                ctk.CTkLabel(self.matrix, text=proceso_siguiente.id).grid(
-                                                row=best_fit_partition.partition_id, column=1, padx=5, pady=5)
-                                ctk.CTkLabel(self.matrix, text=proceso_siguiente.size).grid(
-                                                row=best_fit_partition.partition_id, column=2, padx=5, pady=5)
-                                ctk.CTkLabel(self.matrix, text=proceso_siguiente.arrival_time).grid(
-                                                row=best_fit_partition.partition_id, column=3, padx=5, pady=5)
-                                ctk.CTkLabel(self.matrix, text=proceso_siguiente.execution_time).grid(
-                                            row=best_fit_partition.partition_id, column=4, padx=5, pady=5)
-
+                        self.verifyIfNextProcessIsInMemoryAndLoad()
                     if self.proccess_in_execution.execution_time == 0 or i == 2:
                         # tiempo_finalizacion = self.tiempo
                         # tiempo_retorno = tiempo_finalizacion - self.proceso_en_ejecucion.tiempo_arribo
@@ -649,6 +607,29 @@ class Simulator:
                             break
                         
                         if i==2 and self.proccess_in_execution.execution_time != 0 :
+                            self.verifyReadyQueue() #Primero veo si arribo algun proceso y lo agrego, luego recien devuelvo el que se estaba ejecutando para darle prioridad al que arriba
+                            for proceso in self.ready_queue:
+                                print(proceso.id)
+                            proceso_siguiente = self.ready_queue[0]
+                            if proceso_siguiente != None and not self.is_proccess_loaded_in_memory(proceso_siguiente):
+                                print('el proceso siguiente', proceso_siguiente.id, ' No esta en memoria')
+                                best_partition = self.best_fit_partition(proceso_siguiente.size)
+                                if best_partition != None:
+                                    best_partition.proccess_asigned = proceso_siguiente
+                                    proceso_siguiente.location = best_partition
+                                    self.update_memory_GUI(proceso_siguiente, best_partition)
+                                if(best_partition == None): #Si es none es un caso especial en el cual se debe reemplazar si o si por el proceso en ejecucion que este en memoria, ya q no hay otra opcion.
+                                    best_fit_partition = None
+                                    for partition in self.memory_partitions: #Encuentro la mejor particion teniendo en cuenta que no puede reemplazar aquella particion que tiene el proceso en ejecucion
+                                        if partition.partition_id != 4 and partition.size >= proceso_siguiente.size:  
+                                            if best_fit_partition is None or partition.size < best_fit_partition.size:
+                                                best_fit_partition = partition
+                                    best_fit_partition.proccess_asigned = proceso_siguiente
+                                    proceso_siguiente.location = best_fit_partition.partition_id
+                                    self.update_memory_GUI(proceso_siguiente, best_fit_partition)
+                                    
+
+
                             # Aquí se devuelve el proceso en ejecución a la cola de listos
                             proceso_devuelto = self.proccess_in_execution
                             self.ready_queue.append(proceso_devuelto)
@@ -720,9 +701,64 @@ class Simulator:
 
         for proceso in all_proccess_copy:
             if (len(self.ready_queue) < 5) and (proceso.arrival_time <= self.total_execution_inverse):
+                print('arribo el proceso', proceso.id, 'en el tiempo', self.total_execution_inverse)
                 self.ready_queue.append(proceso)
                 self.all_proccess.remove(proceso)
                 self.update_ready_queue_GUI()
+    
+    def update_memory_GUI(self, process, best_fit_partition):
+        ctk.CTkLabel(self.matrix, text=process.id).grid(
+                                            row=best_fit_partition.partition_id, column=1, padx=5, pady=5)
+        ctk.CTkLabel(self.matrix, text=process.size).grid(
+                                            row=best_fit_partition.partition_id, column=2, padx=5, pady=5)
+        ctk.CTkLabel(self.matrix, text=process.arrival_time).grid(
+                                            row=best_fit_partition.partition_id, column=3, padx=5, pady=5)
+        ctk.CTkLabel(self.matrix, text=process.execution_time).grid(
+                                        row=best_fit_partition.partition_id, column=4, padx=5, pady=5)
+    
+    def verifyIfNextProcessIsInMemoryAndLoad(self):
+                        print("La memoria esta llena")
+                        proceso_siguiente = self.ready_queue[0]
+                        if proceso_siguiente != None and not self.is_proccess_loaded_in_memory(proceso_siguiente):
+                            print("el siguiente proceso no esta en memoria, se debe cargar, sin reemplazar el proceso q se esta ejecutando")
+
+                            best_fit_partition = None
+                            
+                            for partition in self.memory_partitions: #Encuentro la mejor particion teniendo en cuenta que no puede reemplazar aquella particion que tiene el proceso en ejecucion
+                                if partition.partition_id != 4 and partition.proccess_asigned.id != self.proccess_in_execution.id and partition.size >= proceso_siguiente.size:  
+                                    #hasta aca todo correcto 
+                                    if best_fit_partition is None or partition.size < best_fit_partition.size:
+                                        best_fit_partition = partition
+                            print('aa', best_fit_partition)
+                        
+                            if(best_fit_partition != None and not self.is_proccess_loaded_in_memory(proceso_siguiente)):
+                                best_fit_partition.proccess_asigned = proceso_siguiente
+                                proceso_siguiente.location = best_fit_partition.partition_id
+                             # Actualiza la interfaz o los datos necesarios
+                                ctk.CTkLabel(self.matrix, text=proceso_siguiente.id).grid(
+                                                row=best_fit_partition.partition_id, column=1, padx=5, pady=5)
+                                ctk.CTkLabel(self.matrix, text=proceso_siguiente.size).grid(
+                                                row=best_fit_partition.partition_id, column=2, padx=5, pady=5)
+                                ctk.CTkLabel(self.matrix, text=proceso_siguiente.arrival_time).grid(
+                                                row=best_fit_partition.partition_id, column=3, padx=5, pady=5)
+                                ctk.CTkLabel(self.matrix, text=proceso_siguiente.execution_time).grid(
+                                            row=best_fit_partition.partition_id, column=4, padx=5, pady=5)
+                            if(best_fit_partition == None): #Si es none es un caso especial en el cual se debe reemplazar si o si por el proceso en ejecucion que este en memoria, ya q no hay otra opcion.
+                                for partition in self.memory_partitions: #Encuentro la mejor particion teniendo en cuenta que no puede reemplazar aquella particion que tiene el proceso en ejecucion
+                                    if partition.partition_id != 4 and partition.size >= proceso_siguiente.size:  
+                                        if best_fit_partition is None or partition.size < best_fit_partition.size:
+                                            best_fit_partition = partition
+                                best_fit_partition.proccess_asigned = proceso_siguiente
+                                proceso_siguiente.location = best_fit_partition.partition_id
+                             # Actualiza la interfaz o los datos necesarios
+                                ctk.CTkLabel(self.matrix, text=proceso_siguiente.id).grid(
+                                                row=best_fit_partition.partition_id, column=1, padx=5, pady=5)
+                                ctk.CTkLabel(self.matrix, text=proceso_siguiente.size).grid(
+                                                row=best_fit_partition.partition_id, column=2, padx=5, pady=5)
+                                ctk.CTkLabel(self.matrix, text=proceso_siguiente.arrival_time).grid(
+                                                row=best_fit_partition.partition_id, column=3, padx=5, pady=5)
+                                ctk.CTkLabel(self.matrix, text=proceso_siguiente.execution_time).grid(
+                                            row=best_fit_partition.partition_id, column=4, padx=5, pady=5)
 
     def finish_simulation(self):
         # custom_box = tk.Toplevel(root)
