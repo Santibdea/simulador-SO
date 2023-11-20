@@ -696,7 +696,7 @@ class Simulator:
         #             ctk.CTkLabel(self.right_frame, text=process.id).grid(
         #                 row=1, column=1)
         #             self.next_execution()
-        #             process = self.ready_queue[0]
+        #             process = self.ready_queue[0]s
         #             ctk.CTkLabel(self.right_frame, text=process.id).grid(
         #                 row=1, column=0)
 
@@ -706,7 +706,7 @@ class Simulator:
         all_proccess_copy = self.all_proccess.copy()
 
         for proceso in all_proccess_copy:
-            if (len(self.ready_queue) < 5) and (proceso.arrival_time <= self.total_execution_inverse):
+            if (len(self.ready_queue) < 4) and (proceso.arrival_time <= self.total_execution_inverse):
                 print('arribo el proceso', proceso.id, 'en el tiempo', self.total_execution_inverse)
                 self.ready_queue.append(proceso)
                 self.all_proccess.remove(proceso)
