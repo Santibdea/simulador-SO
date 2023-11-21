@@ -273,13 +273,10 @@ class Simulator:
 
         self.right_frame = tk.Frame(
             self.bottom_frame, bg="#00448B", borderwidth=10)
-        self.right_frame.grid(row=1, column=3, padx=5, pady=5)
-
-        self.proccess_exit = ctk.CTkLabel(self.right_frame, text="Proceso que salió de ejecución").grid(
-            row=0, column=1, padx=10, pady=10)
+        self.right_frame.grid(row=1, column=0, padx=5, pady=5)
 
         self.procces_enter = ctk.CTkLabel(self.right_frame, text="Proceso que se asigno a ejecucion").grid(
-            row=0, column=2, padx=10, pady=10)
+            row=0, column=1, padx=10, pady=10)
 
         for index, partition in enumerate(self.memory_partitions):
 
@@ -405,6 +402,8 @@ class Simulator:
                                 best_fit_partition = partition
 
                         if best_fit_partition:
+                            process.internal_fragmentation = best_fit_partition.size - process.size
+
                             best_fit_partition.proccess_asigned = process
                             process.location = best_fit_partition.partition_id
                             process.state = 'ready'
@@ -484,6 +483,7 @@ class Simulator:
                                         best_fit_partition = partition
 
                                 if best_fit_partition:
+                                    process.internal_fragmentation = best_fit_partition.size - process.size
                                     best_fit_partition.proccess_asigned = process
                                     process.location = best_fit_partition.partition_id
                                     process.state = 'ready'
