@@ -19,11 +19,12 @@ ctk.set_default_color_theme("dark-blue")
 
 
 class ComputerProcess:
-    def __init__(self, id, size, arrival_time, execution_time, initial_ex_time=0, location=None, return_time=0, internal_fragmentation=0):
+    def __init__(self, id, size, arrival_time, execution_time, finished_time=None, initial_ex_time=0, location=None, return_time=0, internal_fragmentation=0):
         self.id = id
         self.size = size
         self.arrival_time = arrival_time
         self.execution_time = execution_time
+        self.finished_time = finished_time
         self.initial_ex_time = initial_ex_time
         self.internal_fragmentation = internal_fragmentation
         self.location = location
@@ -252,6 +253,7 @@ class Simulator:
 
         if self.ready_queue:
             self.proccess_in_execution = self.ready_queue.popleft()  # Inicio el primer proceso
+            # self.proccess_in_execution.return_time += 1
 
         cola_finalizados.grid(row=1, column=1, sticky="ne")
         cola_listos.grid(row=1, column=5, sticky="ne")
@@ -358,6 +360,10 @@ class Simulator:
                     self.total_execution_inverse)).grid(row=10, pady=10, column=1)
                 self.proccess_in_execution.execution_time -= 1
 
+                for process in self.ready_queue:
+                    process.return_time += 1
+                self.proccess_in_execution.return_time += 1
+
                 if not self.is_memory_full():  # Caso en el cual la memoria no este llena y haya procesos para asignar
 
                     print(
@@ -418,12 +424,11 @@ class Simulator:
                     # tiempo_espera = tiempo_retorno - self.proceso_en_ejecucion.tiempo_irrupcion   # Para estadisticas
 
                     if self.proccess_in_execution.execution_time == 0:
-
-                        print('un proceso termino')
                         # Aqui si el proceso termina se va a la cola de finalizados
                         self.release_partition(
                             self.proccess_in_execution.location)
                         self.finished_queue.append(self.proccess_in_execution)
+                        self.proccess_in_execution.finished_time = self.total_execution_inverse
                         print(
                             f"El proceso {self.proccess_in_execution.id} termino")
                         proceso_actual_id = self.proccess_in_execution.id if self.proccess_in_execution else "Ninguno"
@@ -437,58 +442,57 @@ class Simulator:
                         self.process_ids = self.process_ids + 1
 
                         self.proccess_in_execution = None
-                        if not self.is_memory_full():  # Caso en el cual la memoria no este llena y haya procesos para asignar
 
+                        print(
+                            "La memoria puede ser cargada con algun proceso y hay algun proceso asignable")
+                        # Crear una lista de particiones libres
+                        free_partitions = [
+                            partition for partition in self.memory_partitions if partition.proccess_asigned is None]
+
+                        # Ordenar las particiones libres por tamaño (de menor a mayor)
+                        free_partitions.sort(
+                            key=lambda partition: partition.size)
+
+                        # Obtener los primeros tres procesos de la cola de listos
+                        num_processes_to_allocate = min(
+                            3, len(self.ready_queue))
+                        processes_to_allocate = list(self.ready_queue)[
+                            :num_processes_to_allocate]
+
+                        unassigned_processes = []
+
+                        # Itera a través de los procesos para asignar
+                        for process in processes_to_allocate:
+                            # Variable para rastrear si el proceso está asignado en alguna partición
+                            is_assigned = False
+
+                            # Itera a través de las particiones para verificar si el proceso está asignado
+                            for partition in self.memory_partitions:
+                                if partition.proccess_asigned is not None and partition.proccess_asigned.id == process.id:
+                                    is_assigned = True
+                                    break
+
+                            # Si el proceso no está asignado, agrégalo al array de procesos no asignados
+                            if not is_assigned:
+                                unassigned_processes.append(process)
+
+                        for process in unassigned_processes:
                             print(
-                                "La memoria puede ser cargada con algun proceso y hay algun proceso asignable")
-                            # Crear una lista de particiones libres
-                            free_partitions = [
-                                partition for partition in self.memory_partitions if partition.proccess_asigned is None]
+                                'se distinguio un proceso que esta en la cola de listos, pero no en memoria')
+                            best_fit_partition = None
 
-                            # Ordenar las particiones libres por tamaño (de menor a mayor)
-                            free_partitions.sort(
-                                key=lambda partition: partition.size)
+                            for partition in free_partitions:
+                                if partition.size >= process.size and (best_fit_partition is None or partition.size < best_fit_partition.size):
+                                    best_fit_partition = partition
 
-                            # Obtener los primeros tres procesos de la cola de listos
-                            num_processes_to_allocate = min(
-                                3, len(self.ready_queue))
-                            processes_to_allocate = list(self.ready_queue)[
-                                :num_processes_to_allocate]
+                            if best_fit_partition:
+                                process.internal_fragmentation = best_fit_partition.size - process.size
+                                best_fit_partition.proccess_asigned = process
+                                process.location = best_fit_partition.partition_id
+                                process.internal_fragmentation = best_fit_partition.size - process.size
 
-                            unassigned_processes = []
-
-                            # Itera a través de los procesos para asignar
-                            for process in processes_to_allocate:
-                                # Variable para rastrear si el proceso está asignado en alguna partición
-                                is_assigned = False
-
-                                # Itera a través de las particiones para verificar si el proceso está asignado
-                                for partition in self.memory_partitions:
-                                    if partition.proccess_asigned is not None and partition.proccess_asigned.id == process.id:
-                                        is_assigned = True
-                                        break
-
-                                # Si el proceso no está asignado, agrégalo al array de procesos no asignados
-                                if not is_assigned:
-                                    unassigned_processes.append(process)
-
-                            for process in unassigned_processes:
-                                print(
-                                    'se distinguio un proceso que esta en la cola de listos, pero no en memoria')
-                                best_fit_partition = None
-
-                                for partition in free_partitions:
-                                    if partition.size >= process.size and (best_fit_partition is None or partition.size < best_fit_partition.size):
-                                        best_fit_partition = partition
-
-                                if best_fit_partition:
-                                    process.internal_fragmentation = best_fit_partition.size - process.size
-                                    best_fit_partition.proccess_asigned = process
-                                    process.location = best_fit_partition.partition_id
-                                    process.internal_fragmentation = best_fit_partition.size - process.size
-
-                                    self.update_memory_GUI(
-                                        process, best_fit_partition)
+                                self.update_memory_GUI(
+                                    process, best_fit_partition)
 
                         if self.ready_queue:  # Si hay procesos en cola de listos, se asigna el siguiente nuevamente
                             proceso_siguiente = self.ready_queue.popleft()
@@ -516,7 +520,7 @@ class Simulator:
                                 if best_partition != None:
                                     best_partition.proccess_asigned = proceso_siguiente
                                     proceso_siguiente.location = best_partition
-                                    proceso_siguiente.internal_fragmentation = best_fit_partition.size - \
+                                    proceso_siguiente.internal_fragmentation = best_partition.size - \
                                         proceso_siguiente.size
 
                                     self.update_memory_GUI(
@@ -560,16 +564,7 @@ class Simulator:
                             self.update_ready_queue_GUI()
                         break
 
-                    # Ya sea por el quantum o porque termino, debe salir del procesador.
-
-                    # while len(simulador.cola_procesos_listos) < 5 and lista_procesos_ordenados: #Controlo multiprogramacion
-                    #     proceso_pendiente = lista_procesos_ordenados.pop(0)
-                    #     simulador.cola_procesos_listos.append(proceso_pendiente)
-
     def verifyReadyQueue(self):
-
-        for process in self.ready_queue:
-            process.return_time += 1
 
         for proceso in self.all_processes:
             print("process id: ", proceso.id)
@@ -611,7 +606,6 @@ class Simulator:
                     # hasta aca todo correcto
                     if best_fit_partition is None or partition.size < best_fit_partition.size:
                         best_fit_partition = partition
-            print('aa', best_fit_partition)
 
             if (best_fit_partition != None and not self.is_proccess_loaded_in_memory(proceso_siguiente)):
                 best_fit_partition.proccess_asigned = proceso_siguiente
@@ -635,14 +629,19 @@ class Simulator:
         top = tk.Toplevel()
         top.title('Simulación finalizada')
         titles = ['Process ID', 'Process Size', 'Arrival Time',
-                  'Execution Time', 'Return Time', 'Wait Time']
+                  'Execution Time', 'Return Time', 'Wait Time', 'Finished Time', 'Mean Return Time', 'Mean Wait Time']
         self.finished_queue = sorted(self.finished_queue, key=lambda proceso: (
             proceso.id, proceso.arrival_time))
         for i, title in enumerate(titles):
             # Poner títulos de la matriz
             tk.Label(top, text=title).grid(
                 row=0, column=i, padx=5, pady=5)
+
+        MRT = 0
+        MWT = 0
         for i, process in enumerate(self.finished_queue, start=1):
+            MRT += process.return_time
+            MWT += process.return_time - process.initial_ex_time
             tk.Label(top, text=str(process.id)).grid(
                 row=i, column=0, padx=5, pady=5)
             tk.Label(top, text=str(process.size)).grid(
@@ -655,7 +654,13 @@ class Simulator:
                 row=i, column=4, padx=5, pady=5)
             tk.Label(top, text=str(process.return_time - process.initial_ex_time)).grid(
                 row=i, column=5, padx=5, pady=5)
+            tk.Label(top, text=str(process.finished_time)).grid(
+                row=i, column=6, padx=5, pady=5)
 
+        tk.Label(top, text=str(MRT / len(self.finished_queue))).grid(
+            row=1, column=7, padx=5, pady=5)
+        tk.Label(top, text=str(MWT / len(self.finished_queue))).grid(
+            row=1, column=8, padx=5, pady=5)
         ok_button = tk.Button(top, text="OK", command=root.destroy)
         ok_button.grid(columnspan=6, pady=10)
 
@@ -669,6 +674,7 @@ class MainApp(ctk.CTk):
 
         # Create an instance of the Simulator class
         self.simulator = Simulator(self.master)
+
 
         # Add other elements to the main application if needed
         # ...
