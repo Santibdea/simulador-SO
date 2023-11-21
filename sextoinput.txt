@@ -1,0 +1,9 @@
+proceso1: 200, 0, 5
+proceso2: 200, 0, 8
+proceso3: 250, 0, 12
+proceso4: 200, 3, 6
+proceso5: 220, 4, 10
+proceso6: 202, 4, 4
+proceso7: 230, 6, 8
+
+

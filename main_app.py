@@ -19,14 +19,13 @@ ctk.set_default_color_theme("dark-blue")
 
 
 class ComputerProcess:
-    def __init__(self, id, size, arrival_time, execution_time, initial_ex_time=0, state=None, location=None, return_time=0, internal_fragmentation=0):
+    def __init__(self, id, size, arrival_time, execution_time, initial_ex_time=0, location=None, return_time=0, internal_fragmentation=0):
         self.id = id
         self.size = size
         self.arrival_time = arrival_time
         self.execution_time = execution_time
         self.initial_ex_time = initial_ex_time
         self.internal_fragmentation = internal_fragmentation
-        self.state = state
         self.location = location
         self.return_time = return_time
 
@@ -145,12 +144,13 @@ class Simulator:
                                    filetypes=[("text files", "*.txt")])
         with open(filename, "r", encoding="utf8") as f:
             for line in f:
-                line = line.split(':')[1].split(',')
-                line = [int(element.strip()) for element in line]
-                self.save_process(line[0], line[1], line[2])
+                if line.strip():
+                    line = line.split(':')[1].split(',')
+                    line = [int(element.strip()) for element in line]
+                    self.save_process(line[0], line[1], line[2])
 
     def save_process(self, p_size, p_ta, p_ti):
-        if len(self.all_processes) >= 10:
+        if len(self.all_processes) > 10:
             messagebox.showerror(
                 "Error", "No es posible cargar mas de 10 procesos")
             return
@@ -204,6 +204,7 @@ class Simulator:
         self.all_processes = sorted(self.all_processes, key=lambda proceso: (
             proceso.id, proceso.arrival_time))
 
+        self.total_execution_inverse = self.all_processes[0].arrival_time
         for proceso in self.all_processes:
             print("process id: ", proceso.id)
             if (len(self.ready_queue) < 6) and (proceso.arrival_time <= self.total_execution_inverse):
@@ -238,7 +239,6 @@ class Simulator:
                 best_partition.proccess_asigned = process
                 process.internal_fragmentation = best_partition.size - process.size
                 process.location = best_partition.partition_id
-                process.state = 'ready'
                 ctk.CTkLabel(self.matrix, text=process.id).grid(
                     row=(best_partition.partition_id), column=1, padx=5, pady=5)
                 ctk.CTkLabel(self.matrix, text=process.size).grid(
@@ -249,8 +249,7 @@ class Simulator:
                     row=(best_partition.partition_id), column=4, padx=5, pady=5)
                 ctk.CTkLabel(self.matrix, text=process.internal_fragmentation).grid(
                     row=(best_partition.partition_id), column=5, padx=5, pady=5)
-            else:
-                process.state = 'ready and suspended'
+
         if self.ready_queue:
             self.proccess_in_execution = self.ready_queue.popleft()  # Inicio el primer proceso
 
@@ -406,7 +405,7 @@ class Simulator:
 
                             best_fit_partition.proccess_asigned = process
                             process.location = best_fit_partition.partition_id
-                            process.state = 'ready'
+                            process.internal_fragmentation = best_fit_partition.size - process.size
 
                             self.update_memory_GUI(
                                 process, best_fit_partition)
@@ -486,7 +485,7 @@ class Simulator:
                                     process.internal_fragmentation = best_fit_partition.size - process.size
                                     best_fit_partition.proccess_asigned = process
                                     process.location = best_fit_partition.partition_id
-                                    process.state = 'ready'
+                                    process.internal_fragmentation = best_fit_partition.size - process.size
 
                                     self.update_memory_GUI(
                                         process, best_fit_partition)
@@ -517,6 +516,9 @@ class Simulator:
                                 if best_partition != None:
                                     best_partition.proccess_asigned = proceso_siguiente
                                     proceso_siguiente.location = best_partition
+                                    proceso_siguiente.internal_fragmentation = best_fit_partition.size - \
+                                        proceso_siguiente.size
+
                                     self.update_memory_GUI(
                                         proceso_siguiente, best_partition)
                                 # Si es none es un caso especial en el cual se debe reemplazar si o si por el proceso en ejecucion que este en memoria, ya q no hay otra opcion.
@@ -528,6 +530,8 @@ class Simulator:
                                                 best_fit_partition = partition
                                     best_fit_partition.proccess_asigned = proceso_siguiente
                                     proceso_siguiente.location = best_fit_partition.partition_id
+                                    proceso_siguiente.internal_fragmentation = best_fit_partition.size - \
+                                        proceso_siguiente.size
                                     self.update_memory_GUI(
                                         proceso_siguiente, best_fit_partition)
                         else:
@@ -576,8 +580,13 @@ class Simulator:
                 self.all_processes.remove(proceso)
                 self.update_ready_queue_GUI()
 
+    def reset_row(self, partition):
+        for i in range(1, 6):
+            ctk.CTkLabel(self.matrix, text='        ').grid(
+                row=partition.partition_id, column=i, padx=5, pady=5)
+
     def update_memory_GUI(self, process, best_fit_partition):
-        process.internal_fragmentation = best_fit_partition.size - process.size
+        self.reset_row(best_fit_partition)
         ctk.CTkLabel(self.matrix, text=process.id).grid(
             row=best_fit_partition.partition_id, column=1, padx=5, pady=5)
         ctk.CTkLabel(self.matrix, text=process.size).grid(
@@ -608,16 +617,7 @@ class Simulator:
                 best_fit_partition.proccess_asigned = proceso_siguiente
                 proceso_siguiente.location = best_fit_partition.partition_id
              # Actualiza la interfaz o los datos necesarios
-                ctk.CTkLabel(self.matrix, text=proceso_siguiente.id).grid(
-                    row=best_fit_partition.partition_id, column=1, padx=5, pady=5)
-                ctk.CTkLabel(self.matrix, text=proceso_siguiente.size).grid(
-                    row=best_fit_partition.partition_id, column=2, padx=5, pady=5)
-                ctk.CTkLabel(self.matrix, text=proceso_siguiente.arrival_time).grid(
-                    row=best_fit_partition.partition_id, column=3, padx=5, pady=5)
-                ctk.CTkLabel(self.matrix, text=proceso_siguiente.execution_time).grid(
-                    row=best_fit_partition.partition_id, column=4, padx=5, pady=5)
-                ctk.CTkLabel(self.matrix, text=proceso_siguiente.internal_fragmentation).grid(
-                    row=(best_fit_partition.partition_id), column=5, padx=5, pady=5)
+                self.update_memory_GUI(proceso_siguiente, best_fit_partition)
             # Si es none es un caso especial en el cual se debe reemplazar si o si por el proceso en ejecucion que este en memoria, ya q no hay otra opcion.
             if (best_fit_partition == None):
                 for partition in self.memory_partitions:  # Encuentro la mejor particion teniendo en cuenta que no puede reemplazar aquella particion que tiene el proceso en ejecucion
@@ -626,17 +626,8 @@ class Simulator:
                             best_fit_partition = partition
                 best_fit_partition.proccess_asigned = proceso_siguiente
                 proceso_siguiente.location = best_fit_partition.partition_id
-             # Actualiza la interfaz o los datos necesarios
-                ctk.CTkLabel(self.matrix, text=proceso_siguiente.id).grid(
-                    row=best_fit_partition.partition_id, column=1, padx=5, pady=5)
-                ctk.CTkLabel(self.matrix, text=proceso_siguiente.size).grid(
-                    row=best_fit_partition.partition_id, column=2, padx=5, pady=5)
-                ctk.CTkLabel(self.matrix, text=proceso_siguiente.arrival_time).grid(
-                    row=best_fit_partition.partition_id, column=3, padx=5, pady=5)
-                ctk.CTkLabel(self.matrix, text=proceso_siguiente.execution_time).grid(
-                    row=best_fit_partition.partition_id, column=4, padx=5, pady=5)
-                ctk.CTkLabel(self.matrix, text=proceso_siguiente.internal_fragmentation).grid(
-                    row=(best_fit_partition.partition_id), column=5, padx=5, pady=5)
+                # Actualiza la interfaz o los datos necesarios
+                self.update_memory_GUI(proceso_siguiente, best_fit_partition)
 
     def finish_simulation(self):
         # custom_box = tk.Toplevel(root)
@@ -678,7 +669,6 @@ class MainApp(ctk.CTk):
 
         # Create an instance of the Simulator class
         self.simulator = Simulator(self.master)
-
 
         # Add other elements to the main application if needed
         # ...

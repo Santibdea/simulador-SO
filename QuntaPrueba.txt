@@ -7,4 +7,3 @@ proceso6: 60, 4, 4
 proceso7: 250, 6, 8
 proceso8: 120, 7, 5
 proceso9: 60, 8, 3
-
