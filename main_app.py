@@ -45,10 +45,10 @@ class Simulator:
         OS = ComputerProcess(0, 100, 0, 0, )
         OS_partition = Partition(4, 100, OS)
 
-        self.memory_partitions = [Partition(1, 250), Partition(
-            2, 120), Partition(3, 60), OS_partition]
+        self.memory_partitions = [Partition(1, 60), Partition(
+            2, 120), Partition(3, 250), OS_partition]
         self.ready_queue = deque()
-        self.proccess_in_execution = None
+        self.process_in_execution = None
         self.titles = ['Memory Partition', 'Process ID',
                        'Process Size', 'Arrival Time', 'Execution Time']
         self.quantum = 2
@@ -242,13 +242,13 @@ class Simulator:
         for partition in self.memory_partitions:
             if partition.partition_id == partition_id:
                 partition.assigned_process = None
-                ctk.CTkLabel(self.matrix, text='----').grid(
+                ctk.CTkLabel(self.matrix, text='    ').grid(
                     row=partition.partition_id, column=1, padx=5, pady=5)
-                ctk.CTkLabel(self.matrix, text='----').grid(
+                ctk.CTkLabel(self.matrix, text='    ').grid(
                     row=partition.partition_id, column=2, padx=5, pady=5)
-                ctk.CTkLabel(self.matrix, text='----').grid(
+                ctk.CTkLabel(self.matrix, text='    ').grid(
                     row=partition.partition_id, column=3, padx=5, pady=5)
-                ctk.CTkLabel(self.matrix, text='----').grid(
+                ctk.CTkLabel(self.matrix, text='    ').grid(
                     row=partition.partition_id, column=4, padx=5, pady=5)
 
     def best_fit_partition(self, process_size):
@@ -256,8 +256,7 @@ class Simulator:
 
         for partition in self.memory_partitions:
             if partition.partition_id != 4 and not partition.assigned_process and partition.size >= process_size:
-                if best_fit_partition is None or partition.size < best_fit_partition.size:
-                    return partition
+                return partition
 
         return None
 
@@ -280,6 +279,7 @@ class Simulator:
                 proceso.state = "ready"
                 if i > 3:
                     proceso.state = "ready and suspended"
+                    proceso.location = None
                 self.ready_queue.append(proceso)
                 self.all_proccess.remove(proceso)
                 self.update_ready_queue_GUI()
@@ -329,8 +329,9 @@ class Simulator:
                     row=(best_partition.partition_id), column=4, padx=5, pady=5)
             else:
                 process.state = 'ready and suspended'
+                process.location = None
 
-        self.proccess_in_execution = self.ready_queue.popleft()  # Inicio el primer proceso
+        self.process_in_execution = self.ready_queue.popleft()  # Inicio el primer proceso
 
         cola_finalizados.grid(row=1, column=1, sticky="ne")
         cola_listos.grid(row=1, column=5, sticky="ne")
@@ -363,7 +364,7 @@ class Simulator:
             row=0, column=0, padx=10, pady=10,)
 
         self.proccess_in_execution_label = ctk.CTkLabel(
-            self.right_frame, text="Proceso en ejecución {}".format(self.proccess_in_execution.id))
+            self.right_frame, text="Proceso en ejecución {}".format(self.process_in_execution.id))
         self.proccess_in_execution_label.grid(
             row=0, column=0, padx=10, pady=10)
         self.proccess_exit = ctk.CTkLabel(self.right_frame, text="Proceso que salió de ejecución").grid(
@@ -479,7 +480,7 @@ class Simulator:
     def assign_best_part(self, process):
         # # Crear una lista de particiones libres
         free_partitions = [
-            partition for partition in self.memory_partitions if partition.assigned_process is None]
+            partition for partition in self.memory_partitions if partition.assigned_process is None and partition.partition_id != 4]
 
         # Ordenar las particiones libres por tamaño (de mayor a menor)
         free_partitions.sort(
@@ -490,9 +491,9 @@ class Simulator:
         for partition in free_partitions:
             if partition.size >= process.size:
                 best_fit_part = partition
+                process.state = 'ready'
+                process.location = best_fit_part.partition_id
                 break
-            else:
-                process.state = "ready and suspended"
 
         if best_fit_part:
             best_fit_part.assigned_process = process
@@ -508,9 +509,11 @@ class Simulator:
             ctk.CTkLabel(self.matrix, text=process.execution_time).grid(
                 row=best_fit_part.partition_id, column=4, padx=5, pady=5)
 
+        self.update_ready_queue_GUI()
+
     def continue_simulation(self, ):
 
-        if self.proccess_in_execution is not None:
+        if self.process_in_execution is not None:
 
             for quantum in range(1, 3):
                 # Verifico si hay algun proceso que se pueda añadir a la cola de listos
@@ -521,64 +524,22 @@ class Simulator:
                     self.total_execution_inverse / self.total_execution)
                 self.tiempo_actual = ctk.CTkLabel(self.master, text=str(
                     self.total_execution_inverse)).grid(row=10, pady=10, column=1)
-                tiempo_restante = self.proccess_in_execution.execution_time - 1
-                self.proccess_in_execution.execution_time = tiempo_restante
 
-                # Caso en el cual la memoria no este llena y haya procesos para asignar
-                if not self.is_memory_full():
+                self.process_in_execution.execution_time -= 1
+                ctk.CTkLabel(self.matrix, text=str(self.process_in_execution.execution_time)).grid(
+                    row=str(self.process_in_execution.location), column=4, padx=5, pady=5)
 
-                    print(
-                        "La memoria puede ser cargada con algun proceso y hay algun proceso asignable")
+                if self.process_in_execution.execution_time == 0 or quantum == 2:
 
-                    # Obtener los primeros tres procesos de la cola de listos
-                    # num_processes_to_allocate = min(3, len(self.ready_queue))
-                    # processes_to_allocate = list(self.ready_queue)[
-                    #     :num_processes_to_allocate]
+                    if self.process_in_execution.execution_time == 0:
 
-                    for process in [process for process in self.ready_queue if process.state == "ready"]:
-                        self.assign_best_part(process)
-                # Veo si la memoria esta llena, el caso en el que el siguiente proceso que se deba procesar no este en memoria, debe cargarse por bestFit, pero sin sacar de memoria el proceso que esta actualmente en ejecucion
-                elif self.ready_queue[0].state == "ready and suspended":
-                    print(
-                        "el siguiente proceso no esta en memoria y esta se encuentra llena, el proceso se debe cargar sin reemplazar el proceso q se esta ejecutando")
-
-                    best_fit_part = None
-                    proceso_siguiente = self.ready_queue[0]
-                    for partition in self.memory_partitions:  # Encuentro la mejor particion teniendo en cuenta que no puede reemplazar aquella particion que tiene el proceso en ejecucion
-                        if partition.partition_id != 4 and partition.assigned_process.id != self.proccess_in_execution.id and partition.size > proceso_siguiente.size:
-                            if best_fit_part is None or partition.size <= best_fit_part.size:
-                                best_fit_part = partition
-
-                    # se puede hacer pq es pasaje siempre es por referencia, este cambio repercute en el mismo proceso q esta en la ready queue por el pasaje por referencia
-                    best_fit_part.assigned_process.state = 'ready and suspended'
-                    proceso_siguiente.state = 'ready'
-                    # self.ready_queue.append(best_fit_part.assigned_process)
-                    proceso_siguiente.location = best_fit_part.partition_id
-                    # Actualiza la interfaz o los datos necesarios
-                    ctk.CTkLabel(self.matrix, text=proceso_siguiente.id).grid(
-                        row=best_fit_part.partition_id, column=1, padx=5, pady=5)
-                    ctk.CTkLabel(self.matrix, text=proceso_siguiente.size).grid(
-                        row=best_fit_part.partition_id, column=2, padx=5, pady=5)
-                    ctk.CTkLabel(self.matrix, text=proceso_siguiente.arrival_time).grid(
-                        row=best_fit_part.partition_id, column=3, padx=5, pady=5)
-                    ctk.CTkLabel(self.matrix, text=proceso_siguiente.execution_time).grid(
-                        row=best_fit_part.partition_id, column=4, padx=5, pady=5)
-
-                if self.proccess_in_execution.execution_time == 0 or quantum == 2:
-                    # tiempo_finalizacion = self.tiempo
-                    # tiempo_retorno = tiempo_finalizacion - self.proceso_en_ejecucion.tiempo_arribo
-                    # tiempo_espera = tiempo_retorno - self.proceso_en_ejecucion.tiempo_irrupcion   # Para estadisticas
-
-                    if self.proccess_in_execution.execution_time == 0:
-
-                        print('un proceso termino')
                         # Aqui si el proceso termina se va a la cola de finalizados
                         self.release_partition(
-                            self.proccess_in_execution.location)
-                        self.finished_queue.append(self.proccess_in_execution)
+                            self.process_in_execution.location)
+                        self.finished_queue.append(self.process_in_execution)
                         print(
-                            f"El proceso {self.proccess_in_execution.id} termino")
-                        proceso_actual_id = self.proccess_in_execution.id if self.proccess_in_execution else "Ninguno"
+                            f"El proceso {self.process_in_execution.id} termino")
+                        proceso_actual_id = self.process_in_execution.id if self.process_in_execution else "Ninguno"
 
                         self.proccess_exit = ctk.CTkLabel(
                             self.right_frame, text="Proceso que abandono el procesador: {}".format(proceso_actual_id))
@@ -588,7 +549,7 @@ class Simulator:
                             row=self.process_ids, padx=5, pady=5)
                         self.process_ids += 1
 
-                        self.proccess_in_execution = None
+                        self.process_in_execution = None
                         # if not self.is_memory_full():  # Caso en el cual la memoria no este llena y haya procesos para asignar
 
                         # print(
@@ -616,13 +577,13 @@ class Simulator:
                         # # Si el proceso no está asignado, agrégalo al array de procesos no asignados
                         # if not is_assigned:
                         #     unassigned_processes.append(process)
-
-                        for process in [process for process in self.ready_queue if process.state == "ready"]:
-                            self.assign_best_part(process)
+                        if any([process for process in self.ready_queue if not process.location]):
+                            for process in self.ready_queue:
+                                self.assign_best_part(process)
 
                         if self.ready_queue:  # Si hay procesos en cola de listos, se asigna el siguiente nuevamente
                             proceso_siguiente = self.ready_queue.popleft()
-                            self.proccess_in_execution = proceso_siguiente
+                            self.process_in_execution = proceso_siguiente
                             self.procces_enter = ctk.CTkLabel(
                                 self.right_frame, text="Proceso que se asigno al procesador: {}".format(proceso_siguiente.id))
                             self.procces_enter.grid(
@@ -633,16 +594,16 @@ class Simulator:
 
                     elif quantum == 2:
                         # Aquí se devuelve el proceso en ejecución a la cola de listos
-                        proceso_devuelto = self.proccess_in_execution
+                        proceso_devuelto = self.process_in_execution
                         self.ready_queue.append(proceso_devuelto)
-                        proceso_actual_id = self.proccess_in_execution.id if self.proccess_in_execution else "Ninguno"
+                        proceso_actual_id = self.process_in_execution.id if self.process_in_execution else "Ninguno"
 
                         self.proccess_exit = ctk.CTkLabel(
                             self.right_frame, text="Proceso que abandono el procesador: {}".format(proceso_actual_id))
                         self.proccess_exit.grid(
                             row=0, column=1, padx=10, pady=10)
 
-                        self.proccess_in_execution = None
+                        self.process_in_execution = None
                         if self.ready_queue:  # Si hay procesos en cola de listos, se asigna el siguiente nuevamente
                             proceso_siguiente = self.ready_queue.popleft()
 
@@ -653,37 +614,84 @@ class Simulator:
                                     if partition.partition_id != 4 and partition.size >= proceso_siguiente.size:
                                         best_part = partition
 
-                                ready_queue_copy = deque()
-                                for process in self.ready_queue:
-                                    if best_part.assigned_process.id == process.id:
-                                        process.location = None
-                                        process.state = 'ready and suspended'
-                                    ready_queue_copy.append(process)
-                                self.ready_queue = ready_queue_copy
+                                # ready_queue_copy = deque()
+                                # for process in self.ready_queue:
+                                #     if best_part.assigned_process.id == process.id:
+                                #         process.location = None
+                                #         process.state = 'ready and suspended'
+                                #     ready_queue_copy.append(process)
+                                # self.ready_queue = ready_queue_copy
+                                best_part.assigned_process.location = None
+                                best_part.assigned_process.state = 'ready and suspended'
+
                                 best_part.assigned_process = proceso_siguiente
                                 proceso_siguiente.location = best_part.partition_id
                                 proceso_siguiente.state = 'ready'
 
-                            self.proccess_in_execution = proceso_siguiente
+                            self.process_in_execution = proceso_siguiente
                             self.procces_enter = ctk.CTkLabel(
                                 self.right_frame, text="Proceso que se asigno al procesador: {}".format(proceso_siguiente.id))
                             self.procces_enter.grid(
                                 row=0, column=2, padx=10, pady=10)
 
                         self.update_ready_queue_GUI()
-                        # break
 
+                    # Caso en el cual la memoria no este llena y haya procesos para asignar
+                    if not self.is_memory_full():
+                        print(
+                            "La memoria puede ser cargada con algun proceso y hay algun proceso asignable")
 
-# hace falta el break?
+                        # Obtener los primeros tres procesos de la cola de listos
+                        # num_processes_to_allocate = min(3, len(self.ready_queue))
+                        # processes_to_allocate = list(self.ready_queue)[
+                        #     :num_processes_to_allocate]
+                        for process in [process for process in self.ready_queue if process.state == "ready" and process.location == None]:
 
-                    # Ya sea por el quantum o porque termino, debe salir del procesador.
+                            self.assign_best_part(process)
+                    # Veo si la memoria esta llena, el caso en el que el siguiente proceso que se deba procesar no este en memoria, debe cargarse por bestFit, pero sin sacar de memoria el proceso que esta actualmente en ejecucion
+                    elif self.ready_queue[0].state == "ready and suspended":
+                        print(
+                            "el siguiente proceso no esta en memoria y esta se encuentra llena, el proceso se debe cargar sin reemplazar el proceso q se esta ejecutando")
 
-                    # while len(simulador.cola_procesos_listos) < 5 and lista_procesos_ordenados: #Controlo multiprogramacion
-                    #     proceso_pendiente = lista_procesos_ordenados.pop(0)
-                    #     simulador.cola_procesos_listos.append(proceso_pendiente)
+                        best_fit_part = None
+                        proceso_siguiente = self.ready_queue[0]
+                        for partition in self.memory_partitions:  # Encuentro la mejor particion teniendo en cuenta que no puede reemplazar aquella particion que tiene el proceso en ejecucion
+                            if partition.partition_id != 4 and partition.assigned_process.id != self.process_in_execution.id and partition.size > proceso_siguiente.size:
+                                if best_fit_part is None or partition.size <= best_fit_part.size:
+                                    best_fit_part = partition
+
+                        # se puede hacer pq es pasaje siempre es por referencia, este cambio repercute en el mismo proceso q esta en la ready queue por el pasaje por referencia
+                        best_fit_part.assigned_process.state = 'ready and suspended'
+                        best_fit_part.assigned_process.location = None
+                        proceso_siguiente.state = 'ready'
+                        best_fit_part.assigned_process = proceso_siguiente
+
+                        # self.ready_queue.append(best_fit_part.assigned_process)
+                        proceso_siguiente.location = best_fit_part.partition_id
+                        # Actualiza la interfaz o los datos necesarios
+                        ctk.CTkLabel(self.matrix, text=proceso_siguiente.id).grid(
+                            row=best_fit_part.partition_id, column=1, padx=5, pady=5)
+                        ctk.CTkLabel(self.matrix, text=proceso_siguiente.size).grid(
+                            row=best_fit_part.partition_id, column=2, padx=5, pady=5)
+                        ctk.CTkLabel(self.matrix, text=proceso_siguiente.arrival_time).grid(
+                            row=best_fit_part.partition_id, column=3, padx=5, pady=5)
+                        ctk.CTkLabel(self.matrix, text=proceso_siguiente.execution_time).grid(
+                            row=best_fit_part.partition_id, column=4, padx=5, pady=5)
+
+                        self.update_ready_queue_GUI()
+
+                        # tiempo_finalizacion = self.tiempo
+                        # tiempo_retorno = tiempo_finalizacion - self.proceso_en_ejecucion.tiempo_arribo
+                        # tiempo_espera = tiempo_retorno - self.proceso_en_ejecucion.tiempo_irrupcion   # Para estadisticas
+
+                        # Ya sea por el quantum o porque termino, debe salir del procesador.
+
+                        # while len(simulador.cola_procesos_listos) < 5 and lista_procesos_ordenados: #Controlo multiprogramacion
+                        #     proceso_pendiente = lista_procesos_ordenados.pop(0)
+                        #     simulador.cola_procesos_listos.append(proceso_pendiente)
 
             # Imprimir el tiempo actual y el proceso en ejecución (o "Ninguno" si no hay proceso)
-            proceso_actual_id = self.proccess_in_execution.id if self.proccess_in_execution else "Ninguno"
+            proceso_actual_id = self.process_in_execution.id if self.process_in_execution else "Ninguno"
             self.proccess_in_execution_label = ctk.CTkLabel(
                 self.right_frame, text="Proceso en ejecución {}".format(proceso_actual_id))
             self.proccess_in_execution_label.grid(
@@ -721,6 +729,10 @@ class Simulator:
 
         # else:
         #     self.finish_simulation()
+        for process in self.ready_queue:
+            print()
+            print(process.id, process.state)
+            print()
 
     def verifyReadyQueue(self):
         all_proccess_copy = self.all_proccess.copy()
