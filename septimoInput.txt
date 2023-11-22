@@ -1,0 +1,7 @@
+proceso1: 50, 0, 5
+proceso2: 60, 0, 8
+proceso3: 70, 0, 12
+proceso4: 80, 3, 6
+proceso5: 10, 4, 10
+proceso6: 32, 4, 4
+proceso7: 40, 6, 8

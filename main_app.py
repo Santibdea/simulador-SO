@@ -206,7 +206,8 @@ class Simulator:
             proceso.id, proceso.arrival_time))
 
         self.total_execution_inverse = self.all_processes[0].arrival_time
-        for proceso in self.all_processes:
+        copy_all_processes = self.all_processes.copy()
+        for proceso in copy_all_processes:
             print("process id: ", proceso.id)
             if (len(self.ready_queue) < 6) and (proceso.arrival_time <= self.total_execution_inverse):
                 print('arribo el proceso', proceso.id,
@@ -251,16 +252,23 @@ class Simulator:
                 ctk.CTkLabel(self.matrix, text=process.internal_fragmentation).grid(
                     row=(best_partition.partition_id), column=5, padx=5, pady=5)
 
-        if self.ready_queue:
-            self.proccess_in_execution = self.ready_queue.popleft()  # Inicio el primer proceso
-            # self.proccess_in_execution.return_time += 1
-
         cola_finalizados.grid(row=1, column=1, sticky="ne")
         cola_listos.grid(row=1, column=5, sticky="ne")
         # Limpiar la GUI antes de actualizarla
         for widget in self.cola_listos.winfo_children():
             widget.destroy()
+        self.right_frame = tk.Frame(
+            self.bottom_frame, bg="#00448B", borderwidth=10)
+        self.right_frame.grid(row=1, column=0, padx=5, pady=5)
 
+        self.procces_enter = ctk.CTkLabel(
+            self.right_frame, text="Proceso que se asigno al procesador: ")
+        if self.ready_queue:
+            self.proccess_in_execution = self.ready_queue.popleft()  # Inicio el primer proceso
+
+            self.procces_enter = ctk.CTkLabel(
+                self.right_frame, text="Proceso que se asigno al procesador: {}".format(self.proccess_in_execution.id))
+            self.procces_enter.grid(row=0, column=0, padx=10, pady=10)
         # Encabezado de la cola de listos
         ctk.CTkLabel(self.cola_listos, text="Cola de listos: ").grid(
             row=0, column=0, padx=10, pady=5)
@@ -271,13 +279,6 @@ class Simulator:
                 row=i, column=0, padx=5, pady=5)
 
         self.delete_buttons()
-
-        self.right_frame = tk.Frame(
-            self.bottom_frame, bg="#00448B", borderwidth=10)
-        self.right_frame.grid(row=1, column=0, padx=5, pady=5)
-
-        self.procces_enter = ctk.CTkLabel(self.right_frame, text="Proceso que se asigno a ejecucion").grid(
-            row=0, column=1, padx=10, pady=10)
 
         for index, partition in enumerate(self.memory_partitions):
 
@@ -315,7 +316,7 @@ class Simulator:
         self.progress_bar.set(0)
         ctk.CTkLabel(self.master, text="Tiempo actual: ").grid(
             row=10, pady=10, column=0)
-        self.tiempo_actual = ctk.CTkLabel(self.master, text="").grid(
+        self.tiempo_actual = ctk.CTkLabel(self.master, text="0").grid(
             row=10, pady=10, column=1)
 
     def is_memory_full(self):
@@ -500,15 +501,13 @@ class Simulator:
                             self.procces_enter = ctk.CTkLabel(
                                 self.right_frame, text="Proceso que se asigno al procesador: {}".format(proceso_siguiente.id))
                             self.procces_enter.grid(
-                                row=0, column=2, padx=10, pady=10)
+                                row=0, column=0, padx=10, pady=10)
                             self.update_ready_queue_GUI()
 
                         break
 
                     if quantum == 2 and self.proccess_in_execution.execution_time != 0:
                         self.verifyReadyQueue()  # Primero veo si arribo algun proceso y lo agrego, luego recien devuelvo el que se estaba ejecutando para darle prioridad al que arriba
-                        for proceso in self.ready_queue:
-                            print(proceso.id)
 
                         if len(self.ready_queue) > 0:
                             proceso_siguiente = self.ready_queue[0]
@@ -560,14 +559,13 @@ class Simulator:
                             self.procces_enter = ctk.CTkLabel(
                                 self.right_frame, text="Proceso que se asigno al procesador: {}".format(proceso_siguiente.id))
                             self.procces_enter.grid(
-                                row=0, column=2, padx=10, pady=10)
+                                row=0, column=0, padx=10, pady=10)
                             self.update_ready_queue_GUI()
                         break
 
     def verifyReadyQueue(self):
-
-        for proceso in self.all_processes:
-            print("process id: ", proceso.id)
+        copy_all_processes = self.all_processes.copy()
+        for proceso in copy_all_processes:
             if (len(self.ready_queue) < 5) and (proceso.arrival_time <= self.total_execution_inverse):
                 print('arribo el proceso', proceso.id,
                       'en el tiempo', self.total_execution_inverse)
@@ -610,6 +608,9 @@ class Simulator:
             if (best_fit_partition != None and not self.is_proccess_loaded_in_memory(proceso_siguiente)):
                 best_fit_partition.proccess_asigned = proceso_siguiente
                 proceso_siguiente.location = best_fit_partition.partition_id
+
+                proceso_siguiente.internal_fragmentation = best_fit_partition.size - \
+                    proceso_siguiente.size
              # Actualiza la interfaz o los datos necesarios
                 self.update_memory_GUI(proceso_siguiente, best_fit_partition)
             # Si es none es un caso especial en el cual se debe reemplazar si o si por el proceso en ejecucion que este en memoria, ya q no hay otra opcion.
@@ -620,6 +621,9 @@ class Simulator:
                             best_fit_partition = partition
                 best_fit_partition.proccess_asigned = proceso_siguiente
                 proceso_siguiente.location = best_fit_partition.partition_id
+                proceso_siguiente.internal_fragmentation = best_fit_partition.size - \
+                    proceso_siguiente.size
+
                 # Actualiza la interfaz o los datos necesarios
                 self.update_memory_GUI(proceso_siguiente, best_fit_partition)
 
@@ -657,9 +661,9 @@ class Simulator:
             tk.Label(top, text=str(process.finished_time)).grid(
                 row=i, column=6, padx=5, pady=5)
 
-        tk.Label(top, text=str(MRT / len(self.finished_queue))).grid(
+        tk.Label(top, text=str(round(MRT / len(self.finished_queue), 2))).grid(
             row=1, column=7, padx=5, pady=5)
-        tk.Label(top, text=str(MWT / len(self.finished_queue))).grid(
+        tk.Label(top, text=str(round(MWT / len(self.finished_queue), 2))).grid(
             row=1, column=8, padx=5, pady=5)
         ok_button = tk.Button(top, text="OK", command=root.destroy)
         ok_button.grid(columnspan=6, pady=10)
